@@ -1,8 +1,16 @@
-module.exports = {
-    BOT_NAME: "JB Ki Queen Anindita Mini Bot",
-    OWNER_NUMBER: "YOUR_PHONE_NUMBER",  // ex: 919876543210
-    WELCOME_MESSAGE: "Welcome @user to the group!",
-    BOT_IMAGE: "./media/bot-image.jpg",
-    HTML_PAGE: "./public/index.html",
-    PREFIX: "/"
-};
+{
+  "name": "jb-queen-mini-bot",
+  "version": "1.0.0",
+  "description": "Whatsapp mini bot JB Ki Queen Anindita",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@adiwajshing/baileys": "^5.0.0",
+    "express": "^4.18.2",
+    "qrcode-terminal": "^0.12.0",
+    "fs-extra": "^11.1.1",
+    "moment": "^2.29.4"
+  }
+}

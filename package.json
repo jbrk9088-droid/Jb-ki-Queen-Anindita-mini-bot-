@@ -1,7 +1,13 @@
-"dependencies": {
-  "@adiwajshing/baileys": "5.0.0",
-  "express": "^4.18.2",
-  "qrcode-terminal": "^0.12.0",
-  "fs-extra": "^11.1.1",
-  "moment": "^2.29.4"
+{
+  "name": "whatsapp-pair-bot",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@whiskeysockets/baileys": "latest",
+    "pino": "^8.0.0"
+  }
 }

@@ -1,20 +1,28 @@
-const { default: makeWASocket, useSingleFileAuthState, fetchLatestBaileysVersion, DisconnectReason, makeCacheableSignalKeyStore } = require("@adiwajshing/baileys");
+/**
+ * JB Ki Queen Anindita Mini Bot
+ * License: MIT (GitHub)
+ * Author: JBPAPA71
+ */
+
+const { default: makeWASocket, useSingleFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = require("@adiwajshing/baileys");
 const { state, saveState } = useSingleFileAuthState('./session.json');
 const fs = require('fs');
 const P = require('pino');
 const express = require('express');
-const { BOT_NAME, OWNER_NUMBER, WELCOME_MESSAGE, BOT_IMAGE, HTML_PAGE, PREFIX } = require('./config');
+const { BOT_NAME, OWNER_NUMBER, WELCOME_MESSAGE, BOT_IMAGE, MENU_IMAGE, HTML_PAGE, PREFIX, PAIR_CODE } = require('./config');
 const qrcode = require('qrcode-terminal');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.use(express.static('public'));  // HTML page
+app.use(express.static('public'));
 
-// Simple Web Page for Bot
 app.get('/', (req, res) => {
     res.sendFile(HTML_PAGE);
 });
+
+// Simple pair system check
+let paired = false;
 
 async function startBot() {
     const { version } = await fetchLatestBaileysVersion();
@@ -27,33 +35,52 @@ async function startBot() {
 
     sock.ev.on('connection.update', update => {
         const { connection, lastDisconnect, qr } = update;
-        if (qr) qrcode.generate(qr, { small: true });
+        if (qr) {
+            qrcode.generate(qr, { small: true });
+            console.log("Scan QR to pair your bot!");
+        }
         if (connection === 'close') {
             let reason = (lastDisconnect.error)?.output?.statusCode;
             if (reason !== DisconnectReason.loggedOut) {
                 startBot();
             }
         } else if (connection === 'open') {
-            console.log(`${BOT_NAME} is now connected!`);
+            console.log(`${BOT_NAME} connected successfully!`);
         }
     });
 
     sock.ev.on('creds.update', saveState);
 
-    // Message Handler
     sock.ev.on('messages.upsert', async m => {
         if (!m.messages) return;
         const msg = m.messages[0];
         if (!msg.message) return;
         const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
 
+        // Pair system
+        if (!paired) {
+            if (text.toLowerCase() === PAIR_CODE) {
+                paired = true;
+                await sock.sendMessage(msg.key.remoteJid, { text: `✅ Bot paired successfully! Welcome!` });
+            } else {
+                await sock.sendMessage(msg.key.remoteJid, { text: `❌ Please send the correct pair code to use the bot.` });
+                return;
+            }
+        }
+
+        // Bot commands after pair
+        if (text.startsWith(PREFIX + 'menu')) {
+            await sock.sendMessage(msg.key.remoteJid, {
+                image: { url: MENU_IMAGE },
+                caption: `*${BOT_NAME} Menu*\n\nCommands:\n/song - play song\n/alltag - tag everyone\n/menu - this menu`
+            });
+        }
+
         if (text.startsWith(PREFIX + 'song')) {
-            // Song command
             await sock.sendMessage(msg.key.remoteJid, { text: "🎵 Playing your song..." });
         }
 
         if (text.startsWith(PREFIX + 'alltag')) {
-            // Tag all
             const groupMeta = await sock.groupMetadata(msg.key.remoteJid);
             const mentions = groupMeta.participants.map(p => p.id);
             await sock.sendMessage(msg.key.remoteJid, { text: `Hello everyone!`, mentions });
@@ -73,7 +100,6 @@ async function startBot() {
         }
     });
 
-    // Anti-link kick
     sock.ev.on('messages.upsert', async m => {
         const msg = m.messages[0];
         const text = msg.message?.conversation || '';

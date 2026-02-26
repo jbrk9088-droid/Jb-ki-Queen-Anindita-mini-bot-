@@ -1,7 +1,6 @@
 /**
  * JB Ki Queen Anindita Mini Bot
- * License: MIT (GitHub)
- * Author: JBPAPA71
+ * License: MIT (GitHub public)
  */
 
 const { default: makeWASocket, useSingleFileAuthState, fetchLatestBaileysVersion, DisconnectReason } = require("@adiwajshing/baileys");
@@ -16,13 +15,9 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.static('public'));
+app.get('/', (req, res) => res.sendFile(HTML_PAGE));
 
-app.get('/', (req, res) => {
-    res.sendFile(HTML_PAGE);
-});
-
-// Simple pair system check
-let paired = false;
+let pairedUsers = []; // store paired users in memory
 
 async function startBot() {
     const { version } = await fetchLatestBaileysVersion();
@@ -43,6 +38,8 @@ async function startBot() {
             let reason = (lastDisconnect.error)?.output?.statusCode;
             if (reason !== DisconnectReason.loggedOut) {
                 startBot();
+            } else {
+                console.log("Logged out. Please delete session.json and restart.");
             }
         } else if (connection === 'open') {
             console.log(`${BOT_NAME} connected successfully!`);
@@ -56,19 +53,20 @@ async function startBot() {
         const msg = m.messages[0];
         if (!msg.message) return;
         const text = msg.message.conversation || msg.message.extendedTextMessage?.text;
+        const sender = msg.key.participant || msg.key.remoteJid;
 
-        // Pair system
-        if (!paired) {
-            if (text.toLowerCase() === PAIR_CODE) {
-                paired = true;
-                await sock.sendMessage(msg.key.remoteJid, { text: `✅ Bot paired successfully! Welcome!` });
+        // Pair check
+        if (!pairedUsers.includes(sender)) {
+            if (text?.toLowerCase() === PAIR_CODE) {
+                pairedUsers.push(sender);
+                await sock.sendMessage(msg.key.remoteJid, { text: `✅ Paired successfully! You can now use the bot.` });
             } else {
-                await sock.sendMessage(msg.key.remoteJid, { text: `❌ Please send the correct pair code to use the bot.` });
+                await sock.sendMessage(msg.key.remoteJid, { text: `❌ Send the correct pair code to use the bot.` });
                 return;
             }
         }
 
-        // Bot commands after pair
+        // Bot commands
         if (text.startsWith(PREFIX + 'menu')) {
             await sock.sendMessage(msg.key.remoteJid, {
                 image: { url: MENU_IMAGE },
@@ -81,6 +79,7 @@ async function startBot() {
         }
 
         if (text.startsWith(PREFIX + 'alltag')) {
+            if (!msg.key.remoteJid.endsWith('@g.us')) return;
             const groupMeta = await sock.groupMetadata(msg.key.remoteJid);
             const mentions = groupMeta.participants.map(p => p.id);
             await sock.sendMessage(msg.key.remoteJid, { text: `Hello everyone!`, mentions });
